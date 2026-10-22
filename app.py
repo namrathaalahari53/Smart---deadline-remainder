@@ -3,128 +3,125 @@ from datetime import date
 
 st.set_page_config(
     page_title="Smart Deadline Reminder",
-    page_icon="⏰",
-    layout="centered"
+    page_icon="📅",
+    layout="wide"
 )
 
 # Initialize tasks
 if "tasks" not in st.session_state:
     st.session_state.tasks = []
 
-# Initialize message
-if "success_message" not in st.session_state:
-    st.session_state.success_message = ""
+# Sidebar menu
+st.sidebar.title("📅 Smart Deadline Reminder")
+st.sidebar.write("Manage your tasks easily")
 
-st.title("⏰ Smart Deadline Reminder")
-st.write("Manage your tasks and never miss a deadline!")
+page = st.sidebar.radio(
+    "Navigation",
+    ["Dashboard", "Add Tasks", "My Tasks", "Task Summary"]
+)
 
-st.divider()
+st.sidebar.markdown("---")
+st.sidebar.caption("Stay organized. Meet every deadline!")
 
-# Add New Task
-st.header("➕ Add a New Task")
+# Dashboard
+if page == "Dashboard":
+    st.title("🏠 Dashboard")
+    st.write("Welcome to Smart Deadline Reminder!")
+    st.write("Manage your tasks and never miss a deadline.")
 
-with st.form("task_form", clear_on_submit=True):
-    task_name = st.text_input(
-        "Task Name",
-        placeholder="Enter your task name"
+    total = len(st.session_state.tasks)
+    completed = sum(
+        1 for task in st.session_state.tasks
+        if task["completed"]
     )
+    pending = total - completed
 
-    deadline = st.date_input(
-        "Select Deadline",
-        value=date.today()
-    )
+    col1, col2, col3 = st.columns(3)
 
-    submitted = st.form_submit_button(
-        "Add Task",
-        use_container_width=True
-    )
+    col1.metric("Total Tasks", total)
+    col2.metric("Completed", completed)
+    col3.metric("Pending", pending)
 
-if submitted:
-    if task_name.strip():
-        st.session_state.tasks.append({
-            "name": task_name.strip(),
-            "deadline": deadline,
-            "completed": False
-        })
+    st.info("Use the menu on the left to manage your tasks.")
 
-        st.session_state.success_message = (
-            f"Task '{task_name.strip()}' added successfully! 🎉"
+# Add Tasks
+elif page == "Add Tasks":
+    st.title("➕ Add a New Task")
+
+    with st.form("add_task_form"):
+        task_name = st.text_input("Task Name")
+        deadline = st.date_input(
+            "Deadline",
+            value=date.today()
         )
-    else:
-        st.session_state.success_message = ""
-        st.error("Please enter a task name!")
 
-# Show success message
-if st.session_state.success_message:
-    st.success(st.session_state.success_message)
-    st.session_state.success_message = ""
+        submitted = st.form_submit_button("Add Task")
 
-st.divider()
+        if submitted:
+            if task_name.strip():
+                st.session_state.tasks.append({
+                    "name": task_name.strip(),
+                    "deadline": deadline,
+                    "completed": False
+                })
+                st.success(
+                    f"Task '{task_name.strip()}' added successfully!"
+                )
+            else:
+                st.error("Please enter a task name!")
 
 # My Tasks
-st.header("📋 My Tasks")
+elif page == "My Tasks":
+    st.title("📋 My Tasks")
 
-if not st.session_state.tasks:
-    st.info("No tasks added yet. Add your first task!")
-else:
-    for i, task in enumerate(st.session_state.tasks):
-        with st.container(border=True):
-            st.subheader(task["name"])
+    if not st.session_state.tasks:
+        st.info("No tasks yet. Go to Add Tasks to create one.")
+    else:
+        for i, task in enumerate(st.session_state.tasks):
+            with st.container(border=True):
+                col1, col2, col3 = st.columns([3, 2, 2])
 
-            st.write(
-                "📅 Deadline: "
-                + task["deadline"].strftime("%d-%m-%Y")
-            )
+                col1.write(f"**{task['name']}**")
+                col2.write(f"📅 {task['deadline']}")
 
-            if task["completed"]:
-                st.success("✅ Task Completed")
-            elif task["deadline"] < date.today():
-                st.error("⚠️ Deadline has passed!")
-            elif task["deadline"] == date.today():
-                st.warning("⏰ Deadline is today!")
-            else:
-                st.info("🕒 Task Pending")
+                if task["completed"]:
+                    col3.success("Completed")
+                else:
+                    col3.warning("Pending")
 
-            col1, col2 = st.columns(2)
+                action1, action2 = st.columns(2)
 
-            with col1:
                 if not task["completed"]:
-                    if st.button(
+                    if action1.button(
                         "Mark as Complete",
-                        key=f"complete_{i}",
-                        use_container_width=True
+                        key=f"complete_{i}"
                     ):
                         st.session_state.tasks[i]["completed"] = True
                         st.rerun()
 
-            with col2:
-                if st.button(
-                    "Delete Task",
-                    key=f"delete_{i}",
-                    use_container_width=True
-                ):
+                if action2.button("Delete", key=f"delete_{i}"):
                     st.session_state.tasks.pop(i)
                     st.rerun()
 
-st.divider()
-
 # Task Summary
-st.header("📊 Task Summary")
+elif page == "Task Summary":
+    st.title("📊 Task Summary")
 
-total_tasks = len(st.session_state.tasks)
-completed_tasks = sum(
-    task["completed"] for task in st.session_state.tasks
-)
-pending_tasks = total_tasks - completed_tasks
+    total = len(st.session_state.tasks)
+    completed = sum(
+        1 for task in st.session_state.tasks
+        if task["completed"]
+    )
+    pending = total - completed
 
-col1, col2, col3 = st.columns(3)
+    st.metric("Total Tasks", total)
+    st.metric("Completed Tasks", completed)
+    st.metric("Pending Tasks", pending)
 
-col1.metric("Total Tasks", total_tasks)
-col2.metric("Completed", completed_tasks)
-col3.metric("Pending", pending_tasks)
-
-st.divider()
-
-st.caption(
-    "Smart Deadline Reminder | Stay organized and meet your deadlines!"
-)
+    if total > 0:
+        progress = completed / total
+        st.write("Completion Progress")
+        st.progress(progress)
+        st.write(f"{int(progress * 100)}% completed")
+    else:
+        st.info("Add some tasks to see your summary.")
